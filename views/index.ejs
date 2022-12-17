@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>FAM_YOUTUBE</title>
+    <link rel="icon" href="https://img.utdstc.com/icon/fc7/bb6/fc7bb6fca4bd5dbdd106d1a217fdc236e39e6c2542f3776d1601473bf6fcc64e:200">   
+    <link href= "../public/assets/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css" integrity="sha512-MV7K8+y+gLIBoVD59lQIYicR65iaqukzvf/nwasF0nqhPay5w/9lJmVM2hMDcnK1OnMGCdVK+iQrJ7lzPJQd1w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  </head>
+
+<body>  
+
+  <!-- Nav -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-danger">
+      <div class="container">
+        <a class="navbar-brand" href="/">FAM_YOUTUBE</a>  
+          <div>
+            <form id="searchForm" class="d-flex m-3">
+              <input class="form-control m-1" type="text" id="inputForm" placeholder="Search" aria-label="Search">
+              <button type="submit" data-target="#searchForm" class="btn btn-outline-primary ">
+              <i class="fas fa-search"></i>
+              </button>
+            </form>
+
+            <ul class="navbar-nav mr-auto">
+              <li class="nav-item active">
+                <a class="btn btn-primary" id="previousPage"><i class="fa fa-arrow-left" aria-hidden="true"></i>Previous</a>
+              </li>
+              <li class="nav-item">
+                <a class="btn btn-primary" id="nextPage">Next<i class="fa fa-arrow-right" aria-hidden="true"></i></a>
+              </li>
+              <select id="filterBtn" class="btn btn-info">
+                <option value="publishedAt" selected>Sort By Published Date</option>
+                <option value="title">Sort by Title</option>
+              </select>
+            </ul>
+            
+          </div>
+      </div>
+    </nav>
+  <!-- Nav Closed -->
+
+  <!-- Content -->
+  <div class="bg-primary">
+    <div class="container-fluid">
+      <div class="row d-flex" id="yt-app">
+            <!-- Dynamic Content -->
+      </div>
+  </div>
+</div>
+  <!-- Content Closed -->
+
+</body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.2/jquery.min.js" integrity="sha512-tWHlutFnuG0C6nQRlpvrEhE4QpkG1nn2MOUMWmUeRePl4e3Aki0VB6W1v3oLjFtd0hVOtRQ9PHpSfN6u6/QXkQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://unpkg.com/ejs@3.1.6/ejs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.10.5/dayjs.min.js" integrity="sha512-n6mJ6AqoohFfbgx3x7N162B/zRNs5x8uvsStlHC+LCvqwKW7oiucE07Ehatg62ybx6Vo1ctaZwm/4sSRUTSIQA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script>
+
+        let searchVal = $("#inputForm").val();
+        let sortBy = $("#filterBtn").val();
+        let page = 0;
+        let isNextExist = false;
+        let isPrevExist = false;
+
+      // Generating Dynamic content using videos result
+        const contentDiv = `
+          <? for(const video of videos) { ?>
+          <div class="col-xl-6 p-4">
+            <div class="card bg-dark">
+              <img class="card-img-top" alt="<?= video.title ?> thumbnail" src="<?= video.thumbnail ?>"/>
+              <div class="card-body">
+                <h4 class="card-title text-light"><?= video.title ?></h5>
+                <p class="font-weight-italic card-text text-info"><?= video.description ?></p>
+                <span class="badge text-light"><?= dayjs(video.publishedAt).format("DD-MM-YYYY") ?></span>
+                <a class="btn btn-danger" href="https://www.youtube.com/watch?v=<?= video.videoId ?>">Watch Video on YT</a>
+              </div>
+            </div>
+          </div>
+          <? } ?>
+        `;
+
+// fetching videos on basis of Search query {FUZZY SEARCHING WORKS}
+      $("#searchForm").on("submit", (e) => {
+        e.preventDefault();
+        searchVal = $("#inputForm").val();
+        fetchVideos();
+      });
+
+// fetching videos on basis of filter by Title/PublishedAt
+      $("#filterBtn").on("change", (e) => {
+        sortBy = $("#filterBtn").val();
+        fetchVideos();
+      });
+
+// fetching videos of the next page
+      $("#nextPage").on("click", () => {
+        if (isNextExist) {
+          page = page + 1;
+          fetchVideos();
+        }
+      });
+// fetching videos of the previous page
+      $("#previousPage").on("click", () => {
+        if (isPrevExist) {
+          page = page - 1;
+          fetchVideos();
+        }
+      });
+
+// Function for fetching videos using fetch() function, by passing all the required params.
+  const fetchVideos = async () => {
+        try {
+          const res = await fetch(`/videos?q=${searchVal}&sortBy=${sortBy}&page=${page}`,
+            //setting headers
+            {
+              method: "GET",cache: "no-cache",
+              headers: {"Content-Type": "application/json"},
+            }
+          );
+
+          const data = await res.json();
+
+          //mapping and rendering data to contentDiv
+          const dynamicHTML = ejs.render(contentDiv, {videos: data.videos}, {delimiter: "?",});
+
+          isPrevExist = data.isPrevExist;
+          isNextExist = data.isNextExist;
+
+          //Clearing and adding dynamic rendered data to app
+          $("#yt-app").empty();
+          $("#yt-app").append(dynamicHTML);
+
+        } catch (err) {console.error(err);}
+      };
+      
+      fetchVideos();
+</script>
+</html>
